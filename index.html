@@ -1,0 +1,717 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VidSprint - AI Short Video Finder</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        :root {
+            --primary: #6366F1;
+            --secondary: #EC4899;
+            --accent: #F59E0B;
+            --bg: #0F0F1A;
+            --surface: #1A1A2E;
+            --surface-light: #252542;
+            --text-primary: #FFFFFF;
+            --text-secondary: #A0A0B8;
+            --success: #10B981;
+            --gradient: linear-gradient(135deg, #6366F1 0%, #EC4899 100%);
+            --radius: 12px;
+            --transition: all 0.3s ease;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html { scroll-behavior: smooth; }
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background: var(--bg);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+        .bg-gradient {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: radial-gradient(circle at 20% 20%, rgba(99, 102, 241, 0.15) 0%, transparent 50%),
+                        radial-gradient(circle at 80% 80%, rgba(236, 72, 153, 0.1) 0%, transparent 50%);
+            pointer-events: none; z-index: -1;
+        }
+        .container { max-width: 1400px; margin: 0 auto; padding: 0 24px; }
+        
+        /* API Notice */
+        .api-notice {
+            background: rgba(245, 158, 11, 0.15);
+            border: 1px solid rgba(245, 158, 11, 0.3);
+            border-radius: 12px;
+            padding: 14px 18px;
+            margin: 16px auto;
+            max-width: 700px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 13px;
+        }
+        .api-notice i { color: var(--accent); font-size: 18px; }
+        .api-notice a { color: var(--accent); text-decoration: none; font-weight: 600; }
+        .api-notice a:hover { text-decoration: underline; }
+        
+        /* Header */
+        header {
+            padding: 20px 0;
+            position: sticky; top: 0; z-index: 100;
+            background: rgba(15, 15, 26, 0.8);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        .header-content { display: flex; justify-content: space-between; align-items: center; }
+        .logo { display: flex; align-items: center; gap: 12px; text-decoration: none; }
+        .logo-icon {
+            width: 44px; height: 44px;
+            background: var(--gradient);
+            border-radius: 10px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 18px; color: white;
+            box-shadow: 0 4px 20px rgba(99, 102, 241, 0.4);
+        }
+        .logo-text {
+            font-size: 22px; font-weight: 800;
+            background: var(--gradient);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .nav-links { display: flex; gap: 28px; align-items: center; }
+        .nav-link {
+            color: var(--text-secondary); text-decoration: none; font-weight: 500;
+            transition: var(--transition); position: relative;
+        }
+        .nav-link:hover { color: var(--text-primary); }
+        .nav-link.active { color: var(--primary); }
+        .nav-link::after {
+            content: ''; position: absolute; bottom: -4px; left: 0;
+            width: 0; height: 2px; background: var(--gradient); transition: var(--transition);
+        }
+        .nav-link:hover::after { width: 100%; }
+        .favorites-btn {
+            background: var(--surface); border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 8px 18px; border-radius: 50px; color: var(--text-primary);
+            font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px;
+            transition: var(--transition);
+        }
+        .favorites-btn:hover { background: var(--surface-light); border-color: var(--primary); }
+        .favorites-btn i { color: var(--secondary); }
+        
+        /* Hero */
+        .hero { padding: 50px 0 30px; text-align: center; }
+        .hero-badge {
+            display: inline-flex; align-items: center; gap: 8px;
+            background: rgba(99, 102, 241, 0.15); border: 1px solid rgba(99, 102, 241, 0.3);
+            padding: 6px 14px; border-radius: 50px; font-size: 13px; color: var(--primary);
+            margin-bottom: 20px;
+        }
+        .hero-badge i { font-size: 11px; }
+        .hero h1 {
+            font-size: clamp(26px, 5vw, 44px); font-weight: 800; line-height: 1.1; margin-bottom: 12px;
+        }
+        .hero h1 span {
+            background: var(--gradient);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .hero p { font-size: 15px; color: var(--text-secondary); max-width: 550px; margin: 0 auto 28px; }
+        
+        /* Search */
+        .search-container { max-width: 650px; margin: 0 auto; position: relative; }
+        .search-box { position: relative; display: flex; align-items: center; }
+        .search-box::before {
+            content: ''; position: absolute; inset: -2px;
+            background: var(--gradient); border-radius: 14px; z-index: -1; opacity: 0.5;
+            transition: var(--transition);
+        }
+        .search-box:focus-within::before { opacity: 1; }
+        .search-input {
+            width: 100%; padding: 16px 22px; padding-left: 50px;
+            background: var(--surface); border: none; border-radius: 12px;
+            font-size: 15px; color: var(--text-primary); outline: none; transition: var(--transition);
+        }
+        .search-input::placeholder { color: var(--text-secondary); }
+        .search-icon { position: absolute; left: 18px; color: var(--text-secondary); font-size: 16px; }
+        .ai-indicator {
+            position: absolute; right: 16px; display: flex; align-items: center; gap: 5px;
+            color: var(--accent); font-size: 12px; font-weight: 600;
+        }
+        .ai-indicator i { animation: sparkle 1.5s ease-in-out infinite; }
+        @keyframes sparkle { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.2); opacity: 0.7; } }
+        
+        /* Trending */
+        .trending-searches { margin-top: 16px; display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
+        .trending-label { font-size: 12px; color: var(--text-secondary); margin-right: 6px; }
+        .trending-tag {
+            background: var(--surface); padding: 5px 12px; border-radius: 50px;
+            font-size: 12px; color: var(--text-secondary); cursor: pointer;
+            transition: var(--transition); border: 1px solid transparent;
+        }
+        .trending-tag:hover { background: var(--surface-light); color: var(--text-primary); border-color: var(--primary); }
+        
+        /* Categories */
+        .categories-section { padding: 24px 0; }
+        .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+        .section-title { font-size: 20px; font-weight: 700; }
+        .category-pills { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 14px; scrollbar-width: none; }
+        .category-pills::-webkit-scrollbar { display: none; }
+        .category-pill {
+            background: var(--surface); padding: 9px 18px; border-radius: 50px;
+            font-weight: 600; font-size: 13px; cursor: pointer;
+            transition: var(--transition); white-space: nowrap;
+            border: 1px solid transparent; display: flex; align-items: center; gap: 7px;
+        }
+        .category-pill i { font-size: 12px; }
+        .category-pill:hover { transform: translateY(-2px) scale(1.02); background: var(--surface-light); box-shadow: 0 6px 20px rgba(99, 102, 241, 0.2); }
+        .category-pill.active { background: var(--gradient); color: white; box-shadow: 0 4px 18px rgba(99, 102, 241, 0.4); }
+        
+        /* Videos Section */
+        .videos-section { padding: 24px 0 60px; }
+        .videos-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .results-count { color: var(--text-secondary); font-size: 13px; }
+        .results-count span { color: var(--text-primary); font-weight: 600; }
+        
+        /* Video Grid */
+        .video-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 18px; }
+        .video-card {
+            background: var(--surface); border-radius: var(--radius); overflow: hidden;
+            cursor: pointer; transition: var(--transition);
+            position: relative; border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        .video-card:hover { transform: translateY(-5px); box-shadow: 0 18px 35px rgba(0, 0, 0, 0.3); border-color: var(--primary); }
+        .video-thumbnail { position: relative; aspect-ratio: 16/9; background: var(--surface-light); overflow: hidden; }
+        .video-thumbnail img { width: 100%; height: 100%; object-fit: cover; transition: var(--transition); }
+        .video-card:hover .video-thumbnail img { transform: scale(1.05); }
+        .video-overlay {
+            position: absolute; inset: 0; background: rgba(0, 0, 0, 0.4);
+            display: flex; align-items: center; justify-content: center; opacity: 0; transition: var(--transition);
+        }
+        .video-card:hover .video-overlay { opacity: 1; }
+        .play-icon {
+            width: 46px; height: 46px; background: var(--gradient); border-radius: 50%;
+            display: flex; align-items: center; justify-content: center; font-size: 16px;
+        }
+        .duration-badge {
+            position: absolute; bottom: 8px; left: 8px;
+            background: rgba(0, 0, 0, 0.8); padding: 3px 7px; border-radius: 4px;
+            font-size: 11px; font-weight: 600;
+        }
+        .favorite-btn {
+            position: absolute; top: 8px; right: 8px; width: 32px; height: 32px;
+            background: rgba(0, 0, 0, 0.6); border: none; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer; transition: var(--transition); color: white; font-size: 12px;
+        }
+        .favorite-btn:hover { background: var(--secondary); transform: scale(1.1); }
+        .favorite-btn.active { background: var(--secondary); }
+        .video-info { padding: 12px; }
+        .video-title {
+            font-size: 13px; font-weight: 600; margin-bottom: 6px;
+            display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+            overflow: hidden; line-height: 1.4;
+        }
+        .video-meta { display: flex; justify-content: space-between; align-items: center; }
+        .video-creator { display: flex; align-items: center; gap: 5px; color: var(--text-secondary); font-size: 11px; }
+        .video-views { color: var(--text-secondary); font-size: 11px; }
+        
+        /* Loading */
+        .loading-container { display: none; flex-direction: column; align-items: center; justify-content: center; padding: 50px 20px; text-align: center; }
+        .loading-container.active { display: flex; }
+        .loading-spinner { width: 44px; height: 44px; border: 3px solid var(--surface-light); border-top-color: var(--primary); border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 16px; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .loading-text { color: var(--text-secondary); font-size: 13px; }
+        
+        /* Error */
+        .error-container { display: none; text-align: center; padding: 50px 20px; }
+        .error-container.active { display: block; }
+        .error-icon { width: 70px; height: 70px; background: rgba(239, 68, 68, 0.15); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px; font-size: 28px; color: #EF4444; }
+        .error-title { font-size: 18px; margin-bottom: 6px; }
+        .error-message { color: var(--text-secondary); font-size: 13px; margin-bottom: 16px; }
+        .retry-btn { background: var(--gradient); color: white; padding: 10px 22px; border: none; border-radius: 50px; font-weight: 600; cursor: pointer; transition: var(--transition); }
+        .retry-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(99, 102, 241, 0.4); }
+        
+        /* Empty */
+        .empty-state { display: none; text-align: center; padding: 50px 20px; }
+        .empty-state.active { display: block; }
+        .empty-icon { width: 70px; height: 70px; background: var(--surface); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px; font-size: 28px; color: var(--text-secondary); }
+        .empty-state h3 { font-size: 18px; margin-bottom: 6px; }
+        .empty-state p { color: var(--text-secondary); font-size: 13px; max-width: 350px; margin: 0 auto; }
+        
+        /* Modal */
+        .modal-overlay { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.8); backdrop-filter: blur(10px); z-index: 1000; display: none; align-items: center; justify-content: center; padding: 20px; }
+        .modal-overlay.active { display: flex; }
+        .modal { background: var(--surface); border-radius: 18px; max-width: 750px; width: 100%; max-height: 90vh; overflow-y: auto; position: relative; box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5); border: 1px solid rgba(255, 255, 255, 0.1); }
+        .modal-close { position: absolute; top: 14px; right: 14px; width: 36px; height: 36px; background: rgba(0, 0, 0, 0.5); border: none; border-radius: 50%; color: white; font-size: 16px; cursor: pointer; transition: var(--transition); z-index: 10; display: flex; align-items: center; justify-content: center; }
+        .modal-close:hover { background: var(--secondary); transform: rotate(90deg); }
+        .modal-video { width: 100%; aspect-ratio: 16/9; background: #000; position: relative; }
+        .modal-video img { width: 100%; height: 100%; object-fit: cover; }
+        .modal-video .play-overlay { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(0, 0, 0, 0.3); }
+        .modal-content { padding: 18px; }
+        .modal-title { font-size: 18px; font-weight: 700; margin-bottom: 10px; }
+        .modal-meta { display: flex; flex-wrap: wrap; gap: 14px; margin-bottom: 14px; }
+        .meta-item { display: flex; align-items: center; gap: 5px; color: var(--text-secondary); font-size: 12px; }
+        .meta-item i { color: var(--primary); }
+        .modal-description { color: var(--text-secondary); line-height: 1.6; font-size: 13px; margin-bottom: 18px; }
+        .modal-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+        .btn-primary { background: var(--gradient); color: white; padding: 11px 22px; border: none; border-radius: 50px; font-weight: 600; font-size: 13px; cursor: pointer; transition: var(--transition); display: flex; align-items: center; gap: 7px; text-decoration: none; }
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(99, 102, 241, 0.4); }
+        .btn-secondary { background: var(--surface-light); color: var(--text-primary); padding: 11px 22px; border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 50px; font-weight: 600; font-size: 13px; cursor: pointer; transition: var(--transition); display: flex; align-items: center; gap: 7px; }
+        .btn-secondary:hover { background: var(--surface); border-color: var(--primary); }
+        .btn-secondary.active { background: var(--secondary); border-color: var(--secondary); }
+        .source-credit { margin-top: 16px; padding-top: 14px; border-top: 1px solid rgba(255, 255, 255, 0.1); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
+        .source-info { display: flex; align-items: center; gap: 9px; }
+        .source-logo { width: 34px; height: 34px; background: #000; border-radius: 7px; display: flex; align-items: center; justify-content: center; font-weight: 700; color: white; font-size: 10px; }
+        .source-text { font-size: 11px; color: var(--text-secondary); }
+        .source-text strong { display: block; color: var(--text-primary); font-size: 12px; }
+        
+        /* Toast */
+        .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%) translateY(100px); background: var(--surface); padding: 12px 18px; border-radius: 10px; box-shadow: 0 8px 35px rgba(0, 0, 0, 0.3); display: flex; align-items: center; gap: 9px; z-index: 1002; transition: transform 0.3s ease; border: 1px solid rgba(255, 255, 255, 0.1); }
+        .toast.active { transform: translateX(-50%) translateY(0); }
+        .toast.success { border-color: var(--success); }
+        .toast i { color: var(--success); font-size: 14px; }
+        
+        /* Footer */
+        footer { padding: 26px 0; border-top: 1px solid rgba(255, 255, 255, 0.05); text-align: center; }
+        .footer-content { color: var(--text-secondary); font-size: 12px; }
+        .footer-content a { color: var(--primary); text-decoration: none; }
+        .footer-content a:hover { text-decoration: underline; }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            .header-content { flex-wrap: wrap; gap: 10px; }
+            .nav-links { display: none; }
+            .hero { padding: 36px 0 24px; }
+            .video-grid { grid-template-columns: 1fr; }
+            .modal-actions { flex-direction: column; }
+            .btn-primary, .btn-secondary { width: 100%; justify-content: center; }
+            .source-credit { flex-direction: column; align-items: flex-start; }
+        }
+        
+        /* Favorites View */
+        .favorites-view { display: none; }
+        .favorites-view.active { display: block; }
+        
+        @keyframes fadeInUp { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: translateY(0); } }
+        .animate-in { animation: fadeInUp 0.4s ease forwards; }
+        
+        /* Load More */
+        .load-more-container { text-align: center; padding: 24px 0; display: none; }
+        .load-more-container.active { display: block; }
+        .load-more-btn { background: var(--surface); color: var(--text-primary); padding: 12px 28px; border: 1px solid var(--primary); border-radius: 50px; font-weight: 600; cursor: pointer; transition: var(--transition); display: inline-flex; align-items: center; gap: 7px; }
+        .load-more-btn:hover { background: var(--primary); transform: translateY(-2px); }
+        .load-more-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    </style>
+</head>
+<body>
+    <div class="bg-gradient"></div>
+
+    <header>
+        <div class="container">
+            <div class="header-content">
+                <a href="#" class="logo">
+                    <div class="logo-icon"><i class="fas fa-play"></i></div>
+                    <span class="logo-text">VidSprint</span>
+                </a>
+                <nav class="nav-links">
+                    <a href="#" class="nav-link active">Discover</a>
+                    <a href="#" class="nav-link">Categories</a>
+                    <a href="#" class="nav-link">Trending</a>
+                </nav>
+                <button class="favorites-btn" id="favoritesBtn">
+                    <i class="fas fa-heart"></i>
+                    <span>Saved</span>
+                    <span id="favoritesCount" style="display:none;">0</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main>
+        <section class="hero">
+            <div class="container">
+                <div class="hero-badge"><i class="fas fa-sparkles"></i><span>Powered by Pexels API</span></div>
+                <h1>Temukan Video Short <span>Gratis</span><br>untuk Konten TikTok Kamu</h1>
+                <p>Cari ribuan video berkualitas tinggi dari Pexels, gratis untuk digunakan!</p>
+                
+                <div class="api-notice">
+                    <i class="fas fa-key"></i>
+                    <p>Dapatkan API Key gratis di <a href="https://www.pexels.com/api/" target="_blank">pexels.com/api</a></p>
+                </div>
+
+                <div class="search-container">
+                    <div class="search-box">
+                        <i class="fas fa-search search-icon"></i>
+                        <input type="text" class="search-input" id="searchInput" placeholder="Cari video short untuk kontenmu...">
+                        <span class="ai-indicator"><i class="fas fa-sparkles"></i> AI Search</span>
+                    </div>
+                </div>
+
+                <div class="trending-searches">
+                    <span class="trending-label">Trending:</span>
+                    <span class="trending-tag" data-query="food cooking">🍳 food</span>
+                    <span class="trending-tag" data-query="fitness workout">💪 fitness</span>
+                    <span class="trending-tag" data-query="travel nature">🌿 nature</span>
+                    <span class="trending-tag" data-query="fashion style">👗 fashion</span>
+                    <span class="trending-tag" data-query="technology">⚡ tech</span>
+                </div>
+            </div>
+        </section>
+
+        <section class="categories-section">
+            <div class="container">
+                <div class="section-header">
+                    <h2 class="section-title">Kategori Populer</h2>
+                </div>
+                <div class="category-pills" id="categoryPills">
+                    <div class="category-pill active" data-category="all"><i class="fas fa-fire"></i>All</div>
+                    <div class="category-pill" data-category="lifestyle"><i class="fas fa-heart"></i>Lifestyle</div>
+                    <div class="category-pill" data-category="food"><i class="fas fa-utensils"></i>Food</div>
+                    <div class="category-pill" data-category="travel"><i class="fas fa-plane"></i>Travel</div>
+                    <div class="category-pill" data-category="fashion"><i class="fas fa-tshirt"></i>Fashion</div>
+                    <div class="category-pill" data-category="fitness"><i class="fas fa-dumbbell"></i>Fitness</div>
+                    <div class="category-pill" data-category="nature"><i class="fas fa-leaf"></i>Nature</div>
+                    <div class="category-pill" data-category="business"><i class="fas fa-briefcase"></i>Business</div>
+                </div>
+            </div>
+        </section>
+
+        <section class="videos-section" id="videosSection">
+            <div class="container">
+                <div class="videos-header">
+                    <div class="results-count">Menampilkan <span id="resultsCount">0</span> video</div>
+                </div>
+                <div class="video-grid" id="videoGrid"></div>
+                <div class="loading-container" id="loadingState">
+                    <div class="loading-spinner"></div>
+                    <p class="loading-text">Memuat video dari Pexels...</p>
+                </div>
+                <div class="error-container" id="errorState">
+                    <div class="error-icon"><i class="fas fa-exclamation-triangle"></i></div>
+                    <h3 class="error-title">Gagal Memuat Video</h3>
+                    <p class="error-message" id="errorMessage">Terjadi kesalahan saat mengambil data dari Pexels</p>
+                    <button class="retry-btn" id="retryBtn"><i class="fas fa-redo"></i> Coba Lagi</button>
+                </div>
+                <div class="empty-state" id="emptyState">
+                    <div class="empty-icon"><i class="fas fa-search"></i></div>
+                    <h3>Tidak ada video ditemukan</h3>
+                    <p>Coba gunakan kata kunci lain atau pilih kategori yang berbeda</p>
+                </div>
+                <div class="load-more-container" id="loadMoreContainer">
+                    <button class="load-more-btn" id="loadMoreBtn"><i class="fas fa-plus"></i> Muat Lebih Banyak</button>
+                </div>
+            </div>
+        </section>
+
+        <section class="videos-section favorites-view" id="favoritesView">
+            <div class="container">
+                <div class="videos-header">
+                    <div class="results-count"><span id="favoritesResultsCount">0</span> video tersimpan</div>
+                    <button class="btn-secondary" id="backToDiscover"><i class="fas fa-arrow-left"></i> Kembali</button>
+                </div>
+                <div class="video-grid" id="favoritesGrid"></div>
+                <div class="empty-state" id="emptyFavorites">
+                    <div class="empty-icon"><i class="fas fa-heart-broken"></i></div>
+                    <h3>Belum ada video tersimpan</h3>
+                    <p>Klik ikon hati pada video untuk menyimpannya</p>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <div class="modal-overlay" id="modalOverlay">
+        <div class="modal" id="videoModal">
+            <button class="modal-close" id="modalClose"><i class="fas fa-times"></i></button>
+            <div class="modal-video">
+                <img id="modalImage" src="" alt="">
+                <div class="play-overlay"><div class="play-icon"><i class="fas fa-play"></i></div></div>
+            </div>
+            <div class="modal-content">
+                <h2 class="modal-title" id="modalTitle">Video Title</h2>
+                <div class="modal-meta">
+                    <div class="meta-item"><i class="fas fa-clock"></i><span id="modalDuration">0:00</span></div>
+                    <div class="meta-item"><i class="fas fa-eye"></i><span id="modalViews">0 views</span></div>
+                    <div class="meta-item"><i class="fas fa-user"></i><span id="modalUser">Unknown</span></div>
+                </div>
+                <p class="modal-description" id="modalDescription">Deskripsi video akan ditampilkan di sini.</p>
+                <div class="modal-actions">
+                    <a href="#" class="btn-primary" id="downloadBtn" target="_blank"><i class="fas fa-download"></i> Download HD</a>
+                    <button class="btn-secondary" id="modalFavoriteBtn"><i class="fas fa-heart"></i> Simpan</button>
+                </div>
+                <div class="source-credit">
+                    <div class="source-info">
+                        <div class="source-logo">PEX</div>
+                        <div class="source-text"><strong>Sumber: Pexels</strong>Video gratis untuk penggunaan pribadi & komersial</div>
+                    </div>
+                    <a href="https://www.pexels.com" target="_blank" class="btn-secondary" style="font-size: 11px; padding: 7px 12px;">Kunjungi Pexels <i class="fas fa-external-link-alt"></i></a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast" id="toast"><i class="fas fa-check-circle"></i><span id="toastMessage">Berhasil disimpan!</span></div>
+
+    <footer>
+        <div class="container">
+            <div class="footer-content">
+                <p>© 2024 <a href="#">VidSprint</a> - AI Video Finder untuk Kreator Konten</p>
+                <p style="margin-top:5px;">Video dari <a href="https://www.pexels.com" target="_blank">Pexels</a> - Lisensi gratis</p>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // ============================================
+        // PEXELS API KEY - Free Video API
+        // ============================================
+        const PEXELS_API_KEY = 'FUqJqzNBSlrKh58a74oT3Wt7CQeR4E4TYfNdBuqlucgmdkpq920I5dQn';
+        // ============================================
+
+        let currentQuery = '';
+        let currentCategory = 'all';
+        let favorites = JSON.parse(localStorage.getItem('vidsprint_favorites')) || [];
+        let currentVideos = [];
+        let page = 1;
+        const perPage = 12;
+        let isLoading = false;
+        let hasMore = true;
+        let showingFavorites = false;
+
+        const searchInput = document.getElementById('searchInput');
+        const videoGrid = document.getElementById('videoGrid');
+        const categoryPills = document.querySelectorAll('.category-pill');
+        const trendingTags = document.querySelectorAll('.trending-tag');
+        const modalOverlay = document.getElementById('modalOverlay');
+        const loadingState = document.getElementById('loadingState');
+        const errorState = document.getElementById('errorState');
+        const emptyState = document.getElementById('emptyState');
+        const toast = document.getElementById('toast');
+        const favoritesBtn = document.getElementById('favoritesBtn');
+        const favoritesCount = document.getElementById('favoritesCount');
+        const favoritesView = document.getElementById('favoritesView');
+        const videosSection = document.getElementById('videosSection');
+        const favoritesGrid = document.getElementById('favoritesGrid');
+        const emptyFavorites = document.getElementById('emptyFavorites');
+        const loadMoreContainer = document.getElementById('loadMoreContainer');
+        const loadMoreBtn = document.getElementById('loadMoreBtn');
+
+        function init() {
+            updateFavoritesCount();
+            setupEventListeners();
+            if (PEXELS_API_KEY === 'YOUR_PEXELS_API_KEY') {
+                showError('Silakan masukkan Pexels API Key di file HTML. <a href="https://www.pexels.com/api/" target="_blank">Dapatkan API Key</a>');
+                return;
+            }
+            searchVideos('', true);
+        }
+
+        function setupEventListeners() {
+            let debounceTimer;
+            searchInput.addEventListener('input', (e) => {
+                clearTimeout(debounceTimer);
+                debounceTimer = setTimeout(() => {
+                    currentQuery = e.target.value;
+                    page = 1;
+                    searchVideos(currentQuery, true);
+                }, 400);
+            });
+
+            trendingTags.forEach(tag => {
+                tag.addEventListener('click', () => {
+                    searchInput.value = tag.dataset.query;
+                    currentQuery = tag.dataset.query;
+                    page = 1;
+                    searchVideos(currentQuery, true);
+                });
+            });
+
+            categoryPills.forEach(pill => {
+                pill.addEventListener('click', () => {
+                    categoryPills.forEach(p => p.classList.remove('active'));
+                    pill.classList.add('active');
+                    currentCategory = pill.dataset.category;
+                    const categoryQueries = { 'all': '', 'lifestyle': 'lifestyle vlog', 'food': 'food cooking', 'travel': 'travel adventure', 'fashion': 'fashion style', 'fitness': 'fitness workout', 'nature': 'nature landscape', 'business': 'business office' };
+                    currentQuery = categoryQueries[currentCategory] || '';
+                    page = 1;
+                    searchVideos(currentQuery, true);
+                });
+            });
+
+            document.getElementById('modalClose').addEventListener('click', closeModal);
+            modalOverlay.addEventListener('click', (e) => { if (e.target === modalOverlay) closeModal(); });
+            document.getElementById('retryBtn').addEventListener('click', () => searchVideos(currentQuery, true));
+            loadMoreBtn.addEventListener('click', () => { page++; searchVideos(currentQuery, false); loadMoreBtn.disabled = true; loadMoreBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Memuat...'; });
+            favoritesBtn.addEventListener('click', toggleFavoritesView);
+            document.getElementById('backToDiscover').addEventListener('click', () => { showingFavorites = false; videosSection.style.display = 'block'; favoritesView.classList.remove('active'); favoritesBtn.classList.remove('active'); });
+            document.getElementById('modalFavoriteBtn').addEventListener('click', function() { toggleFavorite(parseInt(this.dataset.videoId)); updateModalFavoriteButton(parseInt(this.dataset.videoId)); });
+        }
+
+        async function searchVideos(query, reset = false) {
+            if (isLoading) return;
+            if (reset) { videoGrid.innerHTML = ''; currentVideos = []; hasMore = true; }
+            isLoading = true;
+            showLoading(true);
+            hideError();
+            emptyState.classList.remove('active');
+
+            try {
+                let url = query.trim() 
+                    ? `https://api.pexels.com/videos/search?query=${encodeURIComponent(query)}&per_page=${perPage}&page=${page}`
+                    : `https://api.pexels.com/videos/popular?per_page=${perPage}&page=${page}`;
+
+                const response = await fetch(url, { headers: { 'Authorization': PEXELS_API_KEY } });
+                if (!response.ok) throw new Error(`API Error: ${response.status}`);
+                const data = await response.json();
+
+                if (data.videos.length === 0 && page === 1) {
+                    emptyState.classList.add('active');
+                    hasMore = false;
+                } else {
+                    if (reset) currentVideos = data.videos;
+                    else currentVideos = [...currentVideos, ...data.videos];
+                    renderVideos(data.videos, reset);
+                    hasMore = data.videos.length === perPage;
+                    loadMoreContainer.classList.toggle('active', hasMore);
+                }
+                updateResultsCount();
+            } catch (error) {
+                showError('Gagal mengambil video dari Pexels. ' + error.message);
+            } finally {
+                isLoading = false;
+                showLoading(false);
+            }
+        }
+
+        function renderVideos(videos, reset = false) {
+            if (reset) videoGrid.innerHTML = '';
+            const html = videos.map((video, index) => {
+                const duration = formatDuration(video.duration);
+                return `<div class="video-card animate-in" style="animation-delay: ${index * 0.05}s" data-id="${video.id}">
+                    <div class="video-thumbnail">
+                        <img src="${video.image}" alt="${video.user?.name || 'Video'}" loading="lazy" onerror="this.src='https://via.placeholder.com/640x360/1A1A2E/A0A0B8?text=Video'">
+                        <div class="video-overlay"><div class="play-icon"><i class="fas fa-play"></i></div></div>
+                        <span class="duration-badge">${duration}</span>
+                        <button class="favorite-btn ${favorites.includes(video.id) ? 'active' : ''}" data-id="${video.id}"><i class="fas fa-heart"></i></button>
+                    </div>
+                    <div class="video-info">
+                        <h3 class="video-title">${video.user?.name || 'Unknown Creator'}</h3>
+                        <div class="video-meta">
+                            <div class="video-creator"><i class="fas fa-user-circle"></i>${video.user?.name || 'Unknown'}</div>
+                            <span class="video-views">${formatViews(video.views)} views</span>
+                        </div>
+                    </div>
+                </div>`;
+            }).join('');
+            videoGrid.insertAdjacentHTML('beforeend', html);
+            setTimeout(() => {
+                document.querySelectorAll('.video-card').forEach(card => {
+                    card.addEventListener('click', (e) => {
+                        if (!e.target.closest('.favorite-btn')) {
+                            const video = currentVideos.find(v => v.id === parseInt(card.dataset.id));
+                            if (video) openModal(video);
+                        }
+                    });
+                });
+                document.querySelectorAll('.video-card .favorite-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => { e.stopPropagation(); toggleFavorite(parseInt(btn.dataset.id), btn); });
+                });
+            }, 100);
+        }
+
+        function openModal(video) {
+            document.getElementById('modalImage').src = video.image;
+            document.getElementById('modalTitle').textContent = video.user?.name || 'Unknown Creator';
+            document.getElementById('modalDuration').textContent = formatDuration(video.duration);
+            document.getElementById('modalViews').textContent = formatViews(video.views) + ' views';
+            document.getElementById('modalUser').textContent = video.user?.name || 'Unknown';
+            document.getElementById('modalDescription').textContent = `Video oleh ${video.user?.name || 'Unknown'} dari Pexels. Free untuk penggunaan pribadi dan komersial.`;
+            const hdVideo = video.video_files.find(f => f.quality === 'hd') || video.video_files[0];
+            document.getElementById('downloadBtn').href = hdVideo?.link || '#';
+            document.getElementById('downloadBtn').target = '_blank';
+            document.getElementById('modalFavoriteBtn').dataset.videoId = video.id;
+            updateModalFavoriteButton(video.id);
+            modalOverlay.classList.add('active');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeModal() { modalOverlay.classList.remove('active'); document.body.style.overflow = ''; }
+
+        function updateModalFavoriteButton(videoId) {
+            const favBtn = document.getElementById('modalFavoriteBtn');
+            if (favorites.includes(videoId)) { favBtn.classList.add('active'); favBtn.innerHTML = '<i class="fas fa-heart"></i> Tersimpan'; }
+            else { favBtn.classList.remove('active'); favBtn.innerHTML = '<i class="fas fa-heart"></i> Simpan'; }
+        }
+
+        function toggleFavorite(videoId, btn) {
+            const index = favorites.indexOf(videoId);
+            if (index > -1) { favorites.splice(index, 1); if (btn) btn.classList.remove('active'); showToast('Video dihapus dari favorit'); }
+            else { favorites.push(videoId); if (btn) btn.classList.add('active'); showToast('Video disimpan ke favorit!'); }
+            localStorage.setItem('vidsprint_favorites', JSON.stringify(favorites));
+            updateFavoritesCount();
+        }
+
+        function updateFavoritesCount() {
+            if (favorites.length > 0) { favoritesCount.textContent = favorites.length; favoritesCount.style.display = 'inline'; }
+            else { favoritesCount.style.display = 'none'; }
+        }
+
+        function toggleFavoritesView() {
+            showingFavorites = !showingFavorites;
+            if (showingFavorites) { videosSection.style.display = 'none'; favoritesView.classList.add('active'); favoritesBtn.classList.add('active'); renderFavorites(); }
+            else { videosSection.style.display = 'block'; favoritesView.classList.remove('active'); favoritesBtn.classList.remove('active'); }
+        }
+
+        function renderFavorites() {
+            const favoriteVideos = currentVideos.filter(v => favorites.includes(v.id));
+            if (favoriteVideos.length === 0) { favoritesGrid.innerHTML = ''; emptyFavorites.classList.add('active'); document.getElementById('favoritesResultsCount').textContent = '0'; return; }
+            emptyFavorites.classList.remove('active');
+            document.getElementById('favoritesResultsCount').textContent = favoriteVideos.length;
+            favoritesGrid.innerHTML = favoriteVideos.map((video, index) => {
+                const duration = formatDuration(video.duration);
+                return `<div class="video-card animate-in" style="animation-delay: ${index * 0.05}s" data-id="${video.id}">
+                    <div class="video-thumbnail">
+                        <img src="${video.image}" alt="${video.user?.name || 'Video'}" loading="lazy">
+                        <div class="video-overlay"><div class="play-icon"><i class="fas fa-play"></i></div></div>
+                        <span class="duration-badge">${duration}</span>
+                        <button class="favorite-btn active" data-id="${video.id}"><i class="fas fa-heart"></i></button>
+                    </div>
+                    <div class="video-info">
+                        <h3 class="video-title">${video.user?.name || 'Unknown Creator'}</h3>
+                        <div class="video-meta">
+                            <div class="video-creator"><i class="fas fa-user-circle"></i>${video.user?.name || 'Unknown'}</div>
+                            <span class="video-views">${formatViews(video.views)} views</span>
+                        </div>
+                    </div>
+                </div>`;
+            }).join('');
+            setTimeout(() => {
+                document.querySelectorAll('#favoritesGrid .video-card').forEach(card => {
+                    card.addEventListener('click', (e) => {
+                        if (!e.target.closest('.favorite-btn')) {
+                            const video = currentVideos.find(v => v.id === parseInt(card.dataset.id));
+                            if (video) openModal(video);
+                        }
+                    });
+                });
+                document.querySelectorAll('#favoritesGrid .favorite-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => { e.stopPropagation(); toggleFavorite(parseInt(btn.dataset.id), btn); renderFavorites(); });
+                });
+            }, 100);
+        }
+
+        function showToast(message) { document.getElementById('toastMessage').textContent = message; toast.classList.add('active'); setTimeout(() => toast.classList.remove('active'), 3000); }
+        function updateResultsCount() { document.getElementById('resultsCount').textContent = currentVideos.length; }
+        function showLoading(show) { loadingState.classList.toggle('active', show); }
+        function showError(message) { errorState.classList.add('active'); document.getElementById('errorMessage').innerHTML = message; emptyState.classList.remove('active'); videoGrid.style.display = 'none'; }
+        function hideError() { errorState.classList.remove('active'); videoGrid.style.display = ''; }
+        function formatDuration(seconds) { const mins = Math.floor(seconds / 60); const secs = seconds % 60; return `${mins}:${secs.toString().padStart(2, '0')}`; }
+        function formatViews(views) { if (!views) return '0'; if (views >= 1000000) return (views / 1000000).toFixed(1) + 'M'; if (views >= 1000) return (views / 1000).toFixed(1) + 'K'; return views.toString(); }
+
+        init();
+    </script>
+</body>
+</html>
