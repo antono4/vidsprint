@@ -1,5 +1,7 @@
 # Vidsprint 🎬
 
+![Vidsprint Banner](https://images.unsplash.com/photo-1574717024653-61fd2cf4d44d?w=800)
+
 Video creation and editing tool for quick content production.
 
 ## ✨ Features
