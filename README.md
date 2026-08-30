@@ -1,2 +1,26 @@
-Last updated: 2026-08-30 19:59:52 WIB
-Last updated: 2026-08-30 19:59:58 WIB
+# vidsprint
+
+
+
+## 📋 Overview
+
+This repository contains **10 files** and is built with the following technologies:
+
+HTML
+
+## 🚀 Quick Start
+
+## ✨ Features
+
+- 📝 Auto-generated documentation
+
+## 🛠️ Technologies
+
+HTML
+
+## 📄 License
+
+MIT License
+
+---
+*Last updated: 2026-08-30 20:03:16 WIB*
